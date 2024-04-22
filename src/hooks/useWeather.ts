@@ -1,8 +1,8 @@
 import axios from 'axios'
 // import { z } from 'zod'
-import { object, string, number, Output, parse, set } from 'valibot'
+import { object, string, number, Output, parse } from 'valibot'
 import type { SearchTypes } from '../types'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 
 // funcion para castear weather a nuestro tipo Weather y tener autocompletado
 // const isWeatherResponse = (weather : unknown): weather is Weather => {
@@ -39,22 +39,36 @@ const WeatherSchema = object({
     })
 })
 
-type Weather= Output<typeof WeatherSchema>
+export type Weather= Output<typeof WeatherSchema>
+
+const initialState = {
+    name: '',
+    main: {
+        temp: 0,
+        temp_min: 0,
+        temp_max: 0
+    }
+}
 
 export const useWeather = () => {
-    const [weather, setWeather] = useState<Weather>({
-        name: '',
-        main: {
-            temp: 0,
-            temp_min: 0,
-            temp_max: 0,
-        }
-    })
+    const [weather, setWeather] = useState<Weather>(initialState)
+
+    const [loading, setLoading] = useState(false)
+
+    const [notFound, setNotFound] = useState(false)
+
     const fetchWeather = async (search: SearchTypes) => {
         const appID = import.meta.env.VITE_API_KEY
         try {
+            setLoading(true)
+            setWeather(initialState)
             const geoURL = `http://api.openweathermap.org/geo/1.0/direct?q=${search.city},${search.country}&appid=${appID}`
             const { data } = await axios(geoURL)
+            // Comprobar la existencia de ciudad
+            if(!data[0]){
+                setNotFound(true)
+                return
+            }
             const lat = data[0].lat
             const lon = data[0].lon
 
@@ -80,19 +94,24 @@ export const useWeather = () => {
             // Valibot
             const {data: weatherResult} = await axios(weatherURL)
             const result = parse(WeatherSchema, weatherResult)
-            console.log(result)
             if(result) {
                 setWeather(result)
             } else {
                 console.error('Respuesta mal formada ...')
             }
-
-
         } catch (error) {
             console.error(error)
+        } finally {
+            setLoading(false)
         }
     }
+
+    const hasWeatherData = useMemo(() => weather.name, [weather])
     return {
-        fetchWeather
+        weather,
+        loading,
+        notFound,
+        fetchWeather,
+        hasWeatherData
     }
 }
