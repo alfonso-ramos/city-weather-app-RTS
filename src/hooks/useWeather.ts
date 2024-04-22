@@ -62,7 +62,7 @@ export const useWeather = () => {
         try {
             setLoading(true)
             setWeather(initialState)
-            const geoURL = `http://api.openweathermap.org/geo/1.0/direct?q=${search.city},${search.country}&appid=${appID}`
+            const geoURL = `https://api.openweathermap.org/geo/1.0/direct?q=${search.city},${search.country}&appid=${appID}`
             const { data } = await axios(geoURL)
             // Comprobar la existencia de ciudad
             if(!data[0]){
